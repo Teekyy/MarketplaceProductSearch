@@ -75,9 +75,9 @@ def process_books(books_data, other_metadata):
 
 # Main execution loop
 all_books = []
-MAX_NUM_BOOKS = 10
+MAX_NUM_BOOKS = 100
 
-for category, length, book_format in tqdm(product(categories, lengths, formats), total=len(categories)*len(lengths)*len(formats), desc="Querying Google Books"):
+for category, length, book_format in tqdm(product(categories, lengths, formats), total=len(categories)*len(lengths)*len(formats), desc="Generating Book Data"):
     if len(all_books) >= MAX_NUM_BOOKS:
         break
 
@@ -98,7 +98,8 @@ print(f"Total books fetched: {len(all_books)}")
 books_json = json.dumps(all_books, indent=4)
 
 # Save JSON string to file
-with open('books.json', 'w') as f:
-    json.dump(all_books, f, indent=4)
+data_file_path = os.getenv("BOOKS_JSON_FILEPATH")
+with open(data_file_path, 'w') as file:
+    json.dump(all_books, file, indent=4)
 
 

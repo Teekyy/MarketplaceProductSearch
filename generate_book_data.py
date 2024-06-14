@@ -98,8 +98,7 @@ print(f"Total books fetched: {len(all_books)}")
 books_json = json.dumps(all_books, indent=4)
 
 # Save JSON string to file
-data_file_path = os.getenv("BOOKS_JSON_FILEPATH")
-with open(data_file_path, 'w') as file:
+with open('books.json', 'w') as file:
     json.dump(all_books, file, indent=4)
 
 

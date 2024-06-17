@@ -15,7 +15,7 @@ api_url = os.getenv("GOOGLE_BOOKS_API_URL")
 categories = ["Romance", "Thriller", "Comics", "Mystery", "Action Adventure"]
 lengths = ["Short Read", "Standard Length", "Long Read"]
 formats = ["Ebook", "Audiobook", "Paperback"]
-published_date_bins = {
+published_year_bins = {
     'old': {
         'years': (1970, 1999),
         'weight': 1
@@ -55,10 +55,10 @@ def process_books(books_data, other_metadata):
         description = volume_info.get('description')
         thumbnail = volume_info.get('imageLinks', {}).get('thumbnail')
 
-        bins = [info["years"] for info in other_metadata["published_date_bins"].values()]
-        bin_weights =[info["weight"] for info in other_metadata["published_date_bins"].values()]
+        bins = [info["years"] for info in other_metadata["published_year_bins"].values()]
+        bin_weights =[info["weight"] for info in other_metadata["published_year_bins"].values()]
         chosen_bin = random.choices(bins, weights=bin_weights, k=1)[0]
-        published_date = random.randint(*chosen_bin)
+        published_year = random.randint(*chosen_bin)
 
         if description and thumbnail:  # Ensure both description and thumbnail exist
             books.append({
@@ -68,7 +68,7 @@ def process_books(books_data, other_metadata):
                 'category': other_metadata.get('category'),
                 'format': other_metadata.get('format'),
                 'length': other_metadata.get('length'),
-                'published_date': published_date,
+                'published_year': published_year,
                 'thumbnail': thumbnail
             })
     return books
@@ -87,7 +87,7 @@ for category, length, book_format in tqdm(product(categories, lengths, formats),
         'category': category,
         'length': length,
         'format': book_format,
-        'published_date_bins': published_date_bins
+        'published_year_bins': published_year_bins
     }
 
     books = process_books(result, metadata)

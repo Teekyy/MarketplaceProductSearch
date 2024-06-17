@@ -1,7 +1,10 @@
 
 from flask import jsonify, request, abort
+from pymongo import ReturnDocument
 from app import app, db
 from bson import ObjectId
+from schemas import BookSchema, BookUpdateSchema
+from marshmallow import ValidationError
 
 ALLOWED_PROPERTIES = set('title', 'author', 'description', 'category', 'format', 'length', 'published_date', 'thumbnail')
 
@@ -24,31 +27,58 @@ def get_books():
 @app.route('/book/<id>', methods=['GET'])
 def get_book(id):
     try:
-        book = db.books.find_one(ObjectId(id))
+        book = db.books.find_one({'_id': ObjectId(id)})
         if book:
             return jsonify(book), 200
         else:
             return jsonify({'error': 'Book not found.'}), 404
     except Exception as e:
-        return jsonify({'error': 'Invalid ID format.'}), 400
+        return jsonify({'error': 'Internal Server Error', 'messages': e.messages}), 500
     
 @app.route('/book', methods=['POST'])
 def add_book():
-    data = request.json
+    schema = BookSchema()
 
+    try:
+        data = schema.load(request.json)
+        book = db.books.insert_one(data)
+
+        return jsonify(book)
+    except ValidationError as e:
+        return jsonify({'error': 'Validation Error', 'messages': e.messages}), 400
+    except Exception as e:
+        return jsonify({'error': 'Internal Server Error', 'messages': e.messages}), 500
     
 
-    book = {
-        'title': data['title']
-    }
-
 @app.route('/book/<id>', methods=['PUT'])
-def update_book():
-    pass
+def update_book(id):
+    schema = BookUpdateSchema()
+
+    try:
+        data = schema.load(request.json)
+        book = db.books.update_one(
+            {'_id': ObjectId(id)},
+            {'$set': data}
+        )
+
+        return jsonify(book)
+    except ValidationError as e:
+        return jsonify({'error': 'Validation Error', 'messages': e.messages}), 400
+    except Exception as e:
+        return jsonify({'error': 'Internal Server Error', 'messages': e.messages}), 500
+     
 
 @app.route('/book/<id>', methods=['DELETE'])
-def delete_book():
-    pass
+def delete_book(id):
+    try:
+        result = db.books.delete_one({'_id': ObjectId(id)})
+
+        if result.deleted_count > 0:
+            return jsonify({'success': 'Book deleted successfully!'})
+        else:
+            return jsonify({'error': 'Book not found.'}), 404
+    except Exception as e:
+        return jsonify({'error': 'Internal Server Error', 'messages': e.messages}), 500
 
 @app.route('/instance', methods=['POST'])
 def create_instance():

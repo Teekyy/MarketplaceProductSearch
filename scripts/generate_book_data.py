@@ -60,7 +60,7 @@ def main():
 
     print(f"Total books fetched: {len(all_books)}")
     # Save JSON string to file
-    with open('data/books2.json', 'w') as file:
+    with open('data/books.json', 'w') as file:
         json.dump(all_books, file, indent=4)
 
 def fetch_book_data(combination, api_url, published_year_bins, processed_books, lock):

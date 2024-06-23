@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from io import BytesIO
 from tqdm.asyncio import tqdm as atqdm
 import time
-from utils.helpers import camel_case, generate_s3_key
+from utils.helpers import generate_s3_key
 
 async def upload_data(file_path):
     """

@@ -7,7 +7,8 @@ import json
 from dotenv import load_dotenv
 from io import BytesIO
 from tqdm.asyncio import tqdm as atqdm
-import time         
+import time
+from utils.helpers import camel_case, generate_s3_key
 
 async def upload_data(file_path):
     """
@@ -49,12 +50,9 @@ async def upload_data(file_path):
         # Setup and execute coroutines
         for book in books:
 
-            # Extract data from JSON file and generate unique S3 key
-            title = camel_case(book['title'])
-            author = camel_case(book['author'])
-            year = book['published_year']
+            # Extract thumbail from JSON file and generate unique S3 key
             thumbnail_url = book['thumbnail']
-            s3_key = f'{title}_{author}_{year}'
+            s3_key = generate_s3_key(book)
 
             # Create coroutine task and schedule it for execution
             task = asyncio.create_task(download_and_upload_thumbnail(
@@ -119,19 +117,6 @@ async def download_and_upload_thumbnail(session, s3_client, thumbnail_url, bucke
         print(f"An error occurred: {e}")
         pbar.update(1) # Update progress bar
         return False
-
-def camel_case(text):
-    """
-    Converts a given string to camel case.
-
-    Args:
-        text (str): The input string to be converted.
-
-    Returns:
-        str: The camel case version of the input string.
-    """
-    words = text.split()
-    return ''.join([word.capitalize() for word in words])
 
 
 if __name__ == '__main__':

@@ -8,16 +8,18 @@ from dotenv import load_dotenv
 import requests
 from io import BytesIO
 from tqdm.asyncio import tqdm as atqdm
-
-load_dotenv()
-         
+import time         
 
 async def upload_data():
+    load_dotenv()
+
     # Retrieve AWS credentials for client
     bucket_name = os.getenv('AWS_BUCKET_NAME')
     region = os.getenv('AWS_REGION')
     access_key_id = os.getenv('AWS_ACCESS_KEY_ID')
     secret_access_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+
+    start = time.time()
 
     # Access book data from file
     with open('data/books.json', 'r') as file:
@@ -60,6 +62,10 @@ async def upload_data():
         results = await asyncio.gather(*tasks)
         pbar.close()
         num_thumbnails_uploaded = sum(results)
+
+    end = time.time()
+    time_elapsed = end - start
+    print(f'Time elapsed: {time_elapsed} seconds')
 
     print(f'Uploaded {num_thumbnails_uploaded}/{num_books} thumbails.')
 

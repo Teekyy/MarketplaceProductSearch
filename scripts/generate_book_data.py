@@ -24,7 +24,7 @@ def generate_book_data(file_path):
     api_url = os.getenv("GOOGLE_BOOKS_API_URL")
 
     # Data definitions
-    categories = ["Romance", "Thriller", "Comics", "Mystery", "Action Adventure"]
+    categories = ["Cyberpunk", "Thriller", "Comics", "Mystery", "Action Adventure"]
     lengths = ["Short Read", "Standard Length", "Long Read"]
     formats = ["Ebook", "Audiobook", "Paperback"]
     # Distribution weights for how published years should be assigned for each book

@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 import os
 import time
 import json
+from tqdm import tqdm
 from app.models.weighted_embedding_model import WeightedEmbeddingModel
 
 load_dotenv()

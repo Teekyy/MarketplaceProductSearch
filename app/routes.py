@@ -8,12 +8,14 @@ from marshmallow import ValidationError
 
 ALLOWED_PROPERTIES = set('title', 'author', 'description', 'category', 'format', 'length', 'published_date', 'thumbnail')
 
+# PING
 @app.route('/')
 def get_app_health():
     return "Welcome to the Sci-Fi Book Marketplace!"
 
+# DEFAULT SHOW ALL BOOKS
 @app.route('/books', methods=['GET'])
-def get_books():
+def get_all_books():
     page = int(request.args.get('page', 1))
     limit = int(request.args.get('limit', 20))
 
@@ -22,8 +24,12 @@ def get_books():
 
     skip = (page - 1) * limit
     books = db.books.find().skip(skip).limit(limit)
+
+    # TODO: Use the s3 keys stored in each book to generate a signed url. replace the s3 keys with the signed urls
+
     return jsonify([book for book in books])
 
+# CRUD ROUTES
 @app.route('/book/<id>', methods=['GET'])
 def get_book(id):
     try:
@@ -80,6 +86,7 @@ def delete_book(id):
     except Exception as e:
         return jsonify({'error': 'Internal Server Error', 'messages': e.messages}), 500
 
+# INSTANCE DEMONSTRATION ROUTES
 @app.route('/instance', methods=['POST'])
 def create_instance():
     pass

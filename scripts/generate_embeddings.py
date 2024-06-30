@@ -8,7 +8,7 @@ import json
 
 load_dotenv()
 
-use_mps = True
+use_mps = False
 
 # Check if MPS is available
 if torch.backends.mps.is_available() and use_mps:
@@ -22,9 +22,11 @@ else:
 model_name = os.getenv('HF_MODEL_NAME')
 model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2').to(device)
 
+# Load book data
 with open('data/books.json', 'r') as file:
     books = json.load(file)
 
+# warm up model
 _ = model.encode(str(books[0]["description"]), device=device)
 
 # Function to get embeddings
@@ -49,12 +51,16 @@ def generate_embedding(book):
 
     return weighted_embedding
 
+def custom_weighted_model(books):
+    pass
+
 
 # Measure performance over multiple runs for more accuracy
 start = time.time()
 
+embeddings = []
 for book in books:
-    embedding = generate_embedding(book)
+    embeddings.append(generate_embedding(book))
 end = time.time()
 total_time = end - start
 

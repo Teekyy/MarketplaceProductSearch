@@ -7,7 +7,7 @@ import json
 import time
 
 class WeightedEmbeddingModel():
-    def __init__(self, model, use_mps=True):
+    def __init__(self, model, batch_size=32, use_mps=True):
 
         # Initialize device
         if torch.backends.mps.is_available() and use_mps:
@@ -21,6 +21,7 @@ class WeightedEmbeddingModel():
         # Load model and warm it up
         self._model = SentenceTransformer(f'sentence-transformers/{model}').to(device)
         self._model.encode('warmup', device=device)
+        self._batch_size = batch_size
 
         # Define weights and normalize them
         self._weights = {
@@ -33,16 +34,28 @@ class WeightedEmbeddingModel():
         }
         self._normalize_weights()
 
-    def embed(self, book):
-        weighted_embedding = np.zeros(self._model.get_sentence_embedding_dimension())
+    def embed(self, books):
+        texts = []
+        text_weights = []
+        for book in books:
+            for field, weight in self._weights.items():
+                texts.append(book[field])
+                text_weights.append(weight)
 
-        for field, weight in self._weights.items():
-            field_text = str(book[field])
-            field_embedding = np.array(self._model.encode(field_text, device=self._device))
-            
-            weighted_embedding += weight * field_embedding
+        embeddings = np.array(self._model.encode(
+                texts,
+                device=self._device,
+                batch_size=self._batch_size
+            ))
+
+        weighted_embeddings = [np.zeros(self._model.get_sentence_embedding_dimension()) for _ in books]
+
+        num_weights = len(self._weights)
+        for i, (embedding, weight) in enumerate(zip(embeddings, text_weights)):
+            book_index = i // num_weights
+            weighted_embeddings[book_index] += embedding * weight
         
-        return weighted_embedding
+        return weighted_embeddings
         
 
     def _normalize_weights(self):

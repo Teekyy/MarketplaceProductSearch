@@ -1,12 +1,11 @@
 
 from flask import jsonify, request, abort
-from pymongo import ReturnDocument
 from app import app, db
 from bson import ObjectId
-from schemas import BookSchema, BookUpdateSchema
+from .schemas import BookSchema, BookUpdateSchema
 from marshmallow import ValidationError
-
-ALLOWED_PROPERTIES = set('title', 'author', 'description', 'category', 'format', 'length', 'published_date', 'thumbnail')
+import asyncio
+from .services.s3_utils import fetch_presigned_urls
 
 # PING
 @app.route('/')
@@ -23,11 +22,16 @@ def get_all_books():
         abort(400, description="Invalid 'page' or 'limit'. Both must be greater than 0.") 
 
     skip = (page - 1) * limit
-    books = db.books.find().skip(skip).limit(limit)
+    cursor = db.books.find().skip(skip).limit(limit)
+    books = list(cursor)
 
     # TODO: Use the s3 keys stored in each book to generate a signed url. replace the s3 keys with the signed urls
+    s3_keys = [book["thumbnail"] for book in books]
+    presigned_urls = asyncio.run(fetch_presigned_urls(s3_keys))
+    for book, url in zip(books, presigned_urls):
+        book["thumbnail"] = url
 
-    return jsonify([book for book in books])
+    return jsonify(books)
 
 # CRUD ROUTES
 @app.route('/book/<id>', methods=['GET'])
@@ -39,7 +43,7 @@ def get_book(id):
         else:
             return jsonify({'error': 'Book not found.'}), 404
     except Exception as e:
-        return jsonify({'error': 'Internal Server Error', 'messages': e.messages}), 500
+        return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
     
 @app.route('/book', methods=['POST'])
 def add_book():
@@ -53,7 +57,7 @@ def add_book():
     except ValidationError as e:
         return jsonify({'error': 'Validation Error', 'messages': e.messages}), 400
     except Exception as e:
-        return jsonify({'error': 'Internal Server Error', 'messages': e.messages}), 500
+        return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
     
 
 @app.route('/book/<id>', methods=['PUT'])
@@ -71,7 +75,7 @@ def update_book(id):
     except ValidationError as e:
         return jsonify({'error': 'Validation Error', 'messages': e.messages}), 400
     except Exception as e:
-        return jsonify({'error': 'Internal Server Error', 'messages': e.messages}), 500
+        return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
      
 
 @app.route('/book/<id>', methods=['DELETE'])
@@ -84,7 +88,8 @@ def delete_book(id):
         else:
             return jsonify({'error': 'Book not found.'}), 404
     except Exception as e:
-        return jsonify({'error': 'Internal Server Error', 'messages': e.messages}), 500
+        return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+
 
 # INSTANCE DEMONSTRATION ROUTES
 @app.route('/instance', methods=['POST'])

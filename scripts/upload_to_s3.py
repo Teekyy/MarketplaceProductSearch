@@ -99,24 +99,20 @@ async def download_and_upload_thumbnail(session, s3_client, thumbnail_url, bucke
             if response.status == 200:
                 image_data = BytesIO(await response.read())
                 await s3_client.upload_fileobj(image_data, bucket_name, s3_key)
-                pbar.update(1) # Update progress bar
                 return True
             else:
                 print(f'Failed to download image from {thumbnail_url}. Status: {response.status}')
-                pbar.update(1) # Update progress bar
-                return False
     except aiohttp.ClientError as e:
         print(f'HTTP client error occured: {e}')
-        pbar.update(1) # Update progress bar
-        return False
     except botocore.exceptions.ClientError as e:
         print(f"An AWS service error occurred: {e}")
-        pbar.update(1) # Update progress bar
-        return False
     except Exception as e:
         print(f"An error occurred: {e}")
+    finally:
         pbar.update(1) # Update progress bar
-        return False
+    
+    # Return False if there are any errors or exceptions
+    return False
 
 
 if __name__ == '__main__':

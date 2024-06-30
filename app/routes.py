@@ -25,7 +25,6 @@ def get_all_books():
     cursor = db.books.find().skip(skip).limit(limit)
     books = list(cursor)
 
-    # TODO: Use the s3 keys stored in each book to generate a signed url. replace the s3 keys with the signed urls
     s3_keys = [book["thumbnail"] for book in books]
     presigned_urls = asyncio.run(fetch_presigned_urls(s3_keys))
     for book, url in zip(books, presigned_urls):

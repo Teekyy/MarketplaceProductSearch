@@ -8,7 +8,7 @@ from app.models.weighted_embedding_model import WeightedEmbeddingModel
 load_dotenv()
 
 model_name = os.getenv('HF_MODEL_NAME')
-model = WeightedEmbeddingModel(model_name)
+model = WeightedEmbeddingModel(model_name, use_mps=False)
 
 # Load book data
 with open('data/books.json', 'r') as file:
@@ -18,7 +18,7 @@ with open('data/books.json', 'r') as file:
 start = time.time()
 
 embeddings = []
-for book in books:
+for book in tqdm(books):
     embeddings.append(model.embed(book))
 end = time.time()
 total_time = end - start

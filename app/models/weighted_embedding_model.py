@@ -7,7 +7,7 @@ import json
 import time
 
 class WeightedEmbeddingModel():
-    def __init__(self, model, batch_size=32, use_mps=True):
+    def __init__(self, model, batch_size=64, use_mps=True):
 
         # Initialize device
         if torch.backends.mps.is_available() and use_mps:
@@ -48,7 +48,7 @@ class WeightedEmbeddingModel():
                 batch_size=self._batch_size
             ))
 
-        weighted_embeddings = [np.zeros(self._model.get_sentence_embedding_dimension()) for _ in books]
+        weighted_embeddings = np.zeros((len(books), embeddings.shape[1]))
 
         num_weights = len(self._weights)
         for i, (embedding, weight) in enumerate(zip(embeddings, text_weights)):

@@ -55,7 +55,7 @@ class WeightedEmbeddingModel():
             book_index = i // num_weights
             weighted_embeddings[book_index] += embedding * weight
         
-        return weighted_embeddings
+        return weighted_embeddings.tolist()
         
 
     def _normalize_weights(self):

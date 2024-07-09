@@ -1,10 +1,11 @@
 from dotenv import load_dotenv
 import os
 import time
-import json
 from tqdm import tqdm
 from app.models.weighted_embedding_model import WeightedEmbeddingModel
 import math
+from pymongo import MongoClient
+from pinecone import Pinecone
 
 def create_chunks(data, chunk_size):
     num_chunks = math.ceil(len(data) / chunk_size)
@@ -15,9 +16,16 @@ def create_chunks(data, chunk_size):
 if __name__ == '__main__':
     load_dotenv()
     
-    # Load book data
-    with open('data/books.json', 'r') as file:
-        books = json.load(file)
+    # Load book data from MongoDB
+    mongo_uri = os.getenv("MONGO_URI")
+    client = MongoClient(mongo_uri)
+    db = client["marketplace"]
+    collection = db['books']
+    books = list(collection.find())
+
+    # Initialize Pinecone
+    pc = Pinecone()
+    index = pc.Index(host=os.getenv("INDEX_HOST"))
 
     chunk_size = 1800  # Size of each chunk
     batch_size = 80 # Size of batch for encoder model
@@ -33,9 +41,20 @@ if __name__ == '__main__':
     for chunk in tqdm(chunks, total=len(chunks), desc="Processing chunks", unit="chunk"):
         embeddings.extend(model.embed(chunk))
 
+    vectors = [
+        (str(book["_id"]), embedding)
+        for book, embedding in zip(books, embeddings)
+    ]
+
+    try:
+        result = index.upsert(vectors=vectors)
+        print(f"Upserted {result['upserted_count']} documents.")
+    except pc.core.client.exceptions.ConnectionError as e:
+        print("Connection error:", e)
+    except Exception as e:
+        print(f'An unexpected error occurred: {e}')
+
     end = time.time()
     total_time = end - start
-
     print(f"Elapsed time: {total_time} seconds")
-    print(f"Embeddings generated: {len(embeddings)}")
 

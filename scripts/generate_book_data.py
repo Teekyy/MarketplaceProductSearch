@@ -23,6 +23,8 @@ def generate_book_data(file_path):
     # API settings
     api_url = os.getenv("GOOGLE_BOOKS_API_URL")
 
+    # Configurations ----------------------
+    MAX_NUM_BOOKS = 100 # Maximum number of books to generate data for
     # Data definitions
     categories = ["Cyberpunk", "Thriller", "Comics", "Mystery", "Action Adventure"]
     lengths = ["Short Read", "Standard Length", "Long Read"]
@@ -47,7 +49,6 @@ def generate_book_data(file_path):
     start = time.time()
 
     all_books = []
-    MAX_NUM_BOOKS = 100 # Maximum number of books to generate data for
     combinations = product(categories, lengths, formats)
 
     # Used to keep track of previously processed books so there aren't duplicate title-author combos
@@ -76,7 +77,7 @@ def generate_book_data(file_path):
 
     print(f"Total books fetched: {len(all_books)}")
     # Save book data to file as JSON
-    with open('data/books.json', 'w') as file:
+    with open(file_path, 'w') as file:
         json.dump(all_books, file, indent=4)
 
 def fetch_book_data(combination, api_url, published_year_bins, processed_books, lock):
@@ -186,6 +187,10 @@ def process_books(books_data, other_metadata, processed_books, lock):
         description = volume_info.get('description')
         thumbnail = volume_info.get('imageLinks', {}).get('thumbnail')
         title = volume_info.get('title')
+        isbn_13 = next(
+            (id["identifier"] for id in volume_info.get('industryIdentifiers', []) if id["type"] == "ISBN_13"),
+            None
+        )
 
         # Ensure data includes an author; skip if missing
         authors = volume_info.get('authors')
@@ -200,9 +205,10 @@ def process_books(books_data, other_metadata, processed_books, lock):
                 continue
             processed_books.add(title_author)
 
-        # Ensure both description and thumbnail exist before adding book data
-        if description and thumbnail:
+        # Ensure description, thumbnail, and isbn_13 exist before adding book data
+        if description and thumbnail and isbn_13:
             books.append({
+                'isbn': isbn_13,
                 'title': title,
                 'author': author,
                 'description': description,

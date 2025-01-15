@@ -27,8 +27,8 @@ if __name__ == '__main__':
     pc = Pinecone()
     index = pc.Index(host=os.getenv("INDEX_HOST"))
 
-    chunk_size = 1800  # Size of each chunk
-    batch_size = 80 # Size of batch for encoder model
+    chunk_size = 1000  # Size of each chunk
+    batch_size = 64 # Size of batch for encoder model
 
     model_name = os.getenv('HF_MODEL_NAME')
     model = WeightedEmbeddingModel(model_name, batch_size=batch_size, use_mps=True)

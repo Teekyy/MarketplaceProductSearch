@@ -7,6 +7,7 @@ from app.models.weighted_embedding_model import WeightedEmbeddingModel
 import math
 from pinecone import Pinecone
 
+
 def upload_data(file_path):
     load_dotenv()
     
@@ -40,7 +41,7 @@ def upload_data(file_path):
         result = index.upsert(vectors=vectors)
         print(f"Upserted {result['upserted_count']} documents.")
     except pc.core.client.exceptions.ConnectionError as e:
-        print("Connection error:", e)
+        print(f"Connection error: {e}")
     except Exception as e:
         print(f'An unexpected error occurred: {e}')
 
@@ -48,7 +49,6 @@ def upload_data(file_path):
 def create_chunks(data, chunk_size):
     num_chunks = math.ceil(len(data) / chunk_size)
     chunks = [data[i * chunk_size : (i+1) * chunk_size] for i in range(num_chunks)]
-
     return chunks
 
 

@@ -10,6 +10,7 @@ from tqdm.asyncio import tqdm as atqdm
 import time
 from utils.helpers import generate_s3_key
 
+
 async def upload_data(file_path):
     """
     Uploads book thumbnails from book JSON file to an AWS S3 bucket asynchronously.

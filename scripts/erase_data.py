@@ -43,7 +43,7 @@ def erase_s3_data():
         bucket = s3_resource.Bucket(bucket_name)
         bucket.objects.all().delete()
         print(f"Successfully emptied bucket: {bucket_name}")
-    except botocore.execptions.ClientError as e:
+    except botocore.exceptions.ClientError as e:
         print(f"An AWS service error occured: {e}")
     except Exception as e:
         print(f"An error occured: {e}")
@@ -83,7 +83,7 @@ def erase_pinecone_data():
     try:
         # Delete all vectors
         result = index.delete(delete_all=True)
-        print(f"Deleted {result['deleted_count']} vectors.")
+        print(f"Deleted all vectors.")
     except pc.core.client.exceptions.ConnectionError as e:
         print(f"Connection error: {e}")
     except Exception as e:
@@ -92,7 +92,7 @@ def erase_pinecone_data():
 
 if __name__ == '__main__':
     start = time.time()
-    erase_data()
+    asyncio.run(erase_data())
     end = time.time()
     time_elapsed = end - start
     print(f'Time elapsed: {time_elapsed} seconds')

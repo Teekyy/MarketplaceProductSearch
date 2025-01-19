@@ -191,6 +191,7 @@ def process_books(books_data, other_metadata, processed_books, lock):
             (id["identifier"] for id in volume_info.get('industryIdentifiers', []) if id["type"] == "ISBN_13"),
             None
         )
+        avg_rating = volume_info.get('averageRating', -1)
 
         # Ensure data includes an author; skip if missing
         authors = volume_info.get('authors')
@@ -216,6 +217,7 @@ def process_books(books_data, other_metadata, processed_books, lock):
                 'format': other_metadata.get('format'),
                 'length': other_metadata.get('length'),
                 'published_year': published_year,
+                'rating': avg_rating,
                 'thumbnail': thumbnail
             })
     return books

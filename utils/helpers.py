@@ -1,6 +1,6 @@
 def generate_s3_key(book):
     """
-    Generates an S3 key using the title, author, and year from a book JSON object.
+    Generates an S3 key using information from a book JSON object.
 
     Args:
         book (dict): The JSON object containing book data.
@@ -8,10 +8,7 @@ def generate_s3_key(book):
     Returns:
         str: The generated S3 key.
     """
-    title = camel_case(book['title'])
-    author = camel_case(book['author'])
-    year = book['published_year']
-    return f'{title}_{author}_{year}'
+    return book['isbn_13']
 
 def camel_case(text):
     """

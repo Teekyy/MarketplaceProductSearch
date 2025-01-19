@@ -1,0 +1,98 @@
+import time
+from dotenv import load_dotenv
+import asyncio
+import boto3
+import botocore.exceptions
+from pymongo import MongoClient
+from pymongo.errors import BulkWriteError
+from pinecone import Pinecone
+import os
+
+async def erase_data():
+    """
+    Delete book data from S3, MongoDB, and Pinecone asyncrhonously.
+    We are using threads instead of true asynchronous, because most of the operations are single API calls.
+    """
+    load_dotenv()
+
+    try:
+        erase_s3_data_task = asyncio.to_thread(erase_s3_data)
+        erase_mongodb_data_task = asyncio.to_thread(erase_mongodb_data)
+        erase_pinecone_data_task = asyncio.to_thread(erase_pinecone_data)
+
+        await asyncio.gather(erase_s3_data_task, erase_mongodb_data_task, erase_pinecone_data_task)
+        print("Book data erased from S3, MongoDB, and Pinecone successfully!")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+def erase_s3_data():
+    """
+    Completely empty s3 bucket by deleting all objects.
+    """
+    # Retrieve AWS credentials for client
+    bucket_name = os.getenv('AWS_BUCKET_NAME')
+    region = os.getenv('AWS_REGION')
+    access_key_id = os.getenv('AWS_ACCESS_KEY_ID')
+    secret_access_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+ 
+    try:
+        # Create client for S3
+        s3_resource = boto3.resource('s3', region_name=region, aws_access_key_id=access_key_id, aws_secret_access_key=secret_access_key)
+        # Retrieve bucket and delete all objects
+        bucket = s3_resource.Bucket(bucket_name)
+        bucket.objects.all().delete()
+        print(f"Successfully emptied bucket: {bucket_name}")
+    except botocore.execptions.ClientError as e:
+        print(f"An AWS service error occured: {e}")
+    except Exception as e:
+        print(f"An error occured: {e}")
+
+
+def erase_mongodb_data():
+    """
+    Completely empty MongoDB by deleting all documents in the collection.
+    """
+    # Load MongoDB info
+    mongo_uri = os.getenv("MONGO_URI")
+    client = MongoClient(mongo_uri)
+    db = client["marketplace"]
+    collection = db['books']
+
+    try:
+        # Delete all documents
+        result = collection.delete_many({})
+        print(f"Deleted {result.deleted_count} documents.")
+    except BulkWriteError as e:
+        print("An error occurred while deleting documents:", e.details)
+    except Exception as e:
+        print(f'An unexpected error occurred: {e}')
+    finally:
+        client.close()
+
+
+def erase_pinecone_data():
+    """
+    Completely empty Pinecone vector index by deleting all vectors.
+    """
+
+    # Initialize Pinecone
+    pc = Pinecone()
+    index = pc.Index(host=os.getenv("INDEX_HOST"))
+
+    try:
+        # Delete all vectors
+        result = index.delete(delete_all=True)
+        print(f"Deleted {result['deleted_count']} vectors.")
+    except pc.core.client.exceptions.ConnectionError as e:
+        print(f"Connection error: {e}")
+    except Exception as e:
+        print(f'An unexpected error occurred: {e}')
+
+
+if __name__ == '__main__':
+    start = time.time()
+    erase_data()
+    end = time.time()
+    time_elapsed = end - start
+    print(f'Time elapsed: {time_elapsed} seconds')

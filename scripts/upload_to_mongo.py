@@ -6,6 +6,7 @@ import json
 import time
 from utils.helpers import generate_s3_key
 
+
 def upload_data(file_path):
     load_dotenv()
 
@@ -31,6 +32,9 @@ def upload_data(file_path):
         print("An error occurred while inserting documents:", e.details)
     except Exception as e:
         print(f'An unexpected error occurred: {e}')
+    finally:
+        client.close()
+
 
 if __name__ == '__main__':
     start = time.time()

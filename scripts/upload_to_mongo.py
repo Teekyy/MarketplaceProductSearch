@@ -3,6 +3,7 @@ from pymongo.errors import BulkWriteError
 from dotenv import load_dotenv
 import os
 import json
+import time
 from utils.helpers import generate_s3_key
 
 def upload_data(file_path):
@@ -32,4 +33,8 @@ def upload_data(file_path):
         print(f'An unexpected error occurred: {e}')
 
 if __name__ == '__main__':
+    start = time.time()
     upload_data('data/books.json')
+    end = time.time()
+    time_elapsed = end - start
+    print(f'Time elapsed: {time_elapsed} seconds')

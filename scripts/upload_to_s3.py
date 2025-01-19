@@ -26,8 +26,6 @@ async def upload_data(file_path):
     access_key_id = os.getenv('AWS_ACCESS_KEY_ID')
     secret_access_key = os.getenv('AWS_SECRET_ACCESS_KEY')
 
-    start = time.time()
-
     # Access book data from file
     with open(file_path, 'r') as file:
         books = json.load(file)
@@ -70,11 +68,6 @@ async def upload_data(file_path):
         pbar.close()
         num_thumbnails_uploaded = sum(results)
 
-    # Calculate elapsed time
-    end = time.time()
-    time_elapsed = end - start
-    print(f'Time elapsed: {time_elapsed} seconds')
-
     print(f'Uploaded {num_thumbnails_uploaded}/{num_books} thumbails.')
 
 
@@ -116,4 +109,8 @@ async def download_and_upload_thumbnail(session, s3_client, thumbnail_url, bucke
 
 
 if __name__ == '__main__':
+    start = time.time()
     asyncio.run(upload_data('data/books.json'))
+    end = time.time()
+    time_elapsed = end - start
+    print(f'Time elapsed: {time_elapsed} seconds')

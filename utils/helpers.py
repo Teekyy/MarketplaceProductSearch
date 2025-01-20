@@ -8,7 +8,7 @@ def generate_s3_key(book):
     Returns:
         str: The generated S3 key.
     """
-    return book['isbn_13']
+    return f"thumbnails/{book['isbn_13']}"
 
 def camel_case(text):
     """

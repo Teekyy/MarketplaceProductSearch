@@ -41,7 +41,7 @@ def erase_s3_data():
         s3_resource = boto3.resource('s3', region_name=region, aws_access_key_id=access_key_id, aws_secret_access_key=secret_access_key)
         # Retrieve bucket and delete all objects
         bucket = s3_resource.Bucket(bucket_name)
-        bucket.objects.all().delete()
+        bucket.objects.filter(Prefix='thumbnails/').delete()
         print(f"Successfully emptied bucket: {bucket_name}")
     except botocore.exceptions.ClientError as e:
         print(f"An AWS service error occured: {e}")

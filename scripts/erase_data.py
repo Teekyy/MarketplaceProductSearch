@@ -7,21 +7,31 @@ from pymongo import MongoClient
 from pymongo.errors import BulkWriteError
 from pinecone import Pinecone
 import os
+import argparse
 
-async def erase_data():
+async def erase_data(s3=False, mongodb=False, pinecone=False):
     """
     Delete book data from S3, MongoDB, and Pinecone asyncrhonously.
     We are using threads instead of true asynchronous, because most of the operations are single API calls.
     """
     load_dotenv()
 
-    try:
-        erase_s3_data_task = asyncio.to_thread(erase_s3_data)
-        erase_mongodb_data_task = asyncio.to_thread(erase_mongodb_data)
-        erase_pinecone_data_task = asyncio.to_thread(erase_pinecone_data)
+    if not s3 and not mongodb and not pinecone:
+        print("No services specified for erasing book data.")
+        return
 
-        await asyncio.gather(erase_s3_data_task, erase_mongodb_data_task, erase_pinecone_data_task)
-        print("Book data erased from S3, MongoDB, and Pinecone successfully!")
+    try:
+        tasks = []
+
+        if s3:
+            tasks.append(asyncio.to_thread(erase_s3_data))
+        if mongodb:
+            tasks.append(asyncio.to_thread(erase_mongodb_data))
+        if pinecone:
+            tasks.append(asyncio.to_thread(erase_pinecone_data))
+
+        await asyncio.gather(*tasks)
+        print("Book data erased from specified services successfully!")
     except Exception as e:
         print(f"An error occurred: {e}")
 
@@ -91,8 +101,23 @@ def erase_pinecone_data():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Erase book data from specified services.")
+    parser.add_argument("--s3", action="store_true", help="Erase S3 data")
+    parser.add_argument("--mongodb", action="store_true", help="Erase MongoDB data")
+    parser.add_argument("--pinecone", action="store_true", help="Erase Pinecone data")
+
+    args = parser.parse_args()
+
+    # If --all is specified, set all flags to True
+    if args.all:
+        args.S3 = args.mongodb = args.pinecone = True
+
     start = time.time()
-    asyncio.run(erase_data())
+    asyncio.run(erase_data(
+        s3=args.s3,
+        mongodb=args.mongodb,
+        pinecone=args.pinecone
+    ))
     end = time.time()
     time_elapsed = end - start
     print(f'Time elapsed: {time_elapsed} seconds')

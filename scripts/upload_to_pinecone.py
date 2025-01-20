@@ -18,7 +18,7 @@ def upload_data(file_path):
 
     # Initialize Pinecone
     pc = Pinecone()
-    index = pc.Index(host=os.getenv("INDEX_HOST"))
+    index = pc.Index(host=os.getenv("PINECONE_INDEX_HOST"))
 
     chunk_size = 1000  # Size of each chunk
     batch_size = 64 # Size of batch for encoder model

@@ -92,7 +92,7 @@ def erase_pinecone_data():
 
     # Initialize Pinecone
     pc = Pinecone()
-    index = pc.Index(host=os.getenv("INDEX_HOST"))
+    index = pc.Index(host=os.getenv("PINECONE_INDEX_HOST"))
 
     try:
         # Delete all vectors

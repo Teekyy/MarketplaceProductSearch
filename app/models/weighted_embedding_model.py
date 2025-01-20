@@ -30,7 +30,8 @@ class WeightedEmbeddingModel():
             'description': 4,
             'category': 1,
             'format': 0.5,
-            'length': 0.5
+            'length': 0.5,
+            'published': 0.5
         }
         self._normalize_weights()
 
@@ -39,7 +40,10 @@ class WeightedEmbeddingModel():
         text_weights = []
         for book in books:
             for field, weight in self._weights.items():
-                texts.append(book[field])
+                if field is 'published':
+                    texts.append(self._get_book_age_category(book))
+                else:
+                    texts.append(book[field])
                 text_weights.append(weight)
 
         embeddings = np.array(self._model.encode(
@@ -63,7 +67,17 @@ class WeightedEmbeddingModel():
         self._weights = {key: value / total_weights for key, value in self._weights.items()}
         
 
+    def _get_book_age_category(self, book):
+        age_to_year_mapping = {
+            'old': (1970, 1999),
+            'recent': (2000, 2020),
+            'new': (2021, 2024)
+        }
 
+        published_year = book['published_year']
 
+        for age, (start_year, end_year) in age_to_year_mapping.items():
+            if start_year <= published_year <= end_year:
+                return age
 
-        
+        return 'unknown'

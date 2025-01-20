@@ -6,6 +6,10 @@ import botocore.exceptions
 from pymongo import MongoClient
 from pymongo.errors import BulkWriteError
 from pinecone import Pinecone
+from pinecone.exceptions import (
+    PineconeException,
+    NotFoundException
+)
 import os
 import argparse
 
@@ -94,10 +98,12 @@ def erase_pinecone_data():
         # Delete all vectors
         result = index.delete(delete_all=True)
         print(f"Deleted all vectors.")
-    except pc.core.client.exceptions.ConnectionError as e:
-        print(f"Connection error: {e}")
+    except NotFoundException as e:
+        print("No vectors to delete in Pinecone index.")
+    except PineconeException as e:
+        print(f"Pinecone error: {e}.")
     except Exception as e:
-        print(f'An unexpected error occurred: {e}')
+        print(f'An unexpected error occurred: {e}.')
 
 
 if __name__ == '__main__':
@@ -105,12 +111,13 @@ if __name__ == '__main__':
     parser.add_argument("--s3", action="store_true", help="Erase S3 data")
     parser.add_argument("--mongodb", action="store_true", help="Erase MongoDB data")
     parser.add_argument("--pinecone", action="store_true", help="Erase Pinecone data")
+    parser.add_argument("--all", action="store_true", help="Erase data from all services")
 
     args = parser.parse_args()
 
     # If --all is specified, set all flags to True
     if args.all:
-        args.S3 = args.mongodb = args.pinecone = True
+        args.s3 = args.mongodb = args.pinecone = True
 
     start = time.time()
     asyncio.run(erase_data(

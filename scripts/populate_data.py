@@ -38,6 +38,7 @@ if __name__ == '__main__':
     parser.add_argument('--s3', action='store_true', help="Populate book data in S3")
     parser.add_argument('--mongodb', action='store_true', help="Populate book data in MongoDB")
     parser.add_argument('--pinecone', action='store_true', help="Populate book data in Pinecone")
+    parser.add_argument('--all', action='store_true', help="Populate book data in all services")
 
     args = parser.parse_args()
 

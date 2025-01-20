@@ -6,6 +6,7 @@ from tqdm import tqdm
 from app.models.weighted_embedding_model import WeightedEmbeddingModel
 import math
 from pinecone import Pinecone
+from pinecone.exceptions import PineconeException
 
 
 def upload_data(file_path):
@@ -40,8 +41,8 @@ def upload_data(file_path):
     try:
         result = index.upsert(vectors=vectors)
         print(f"Upserted {result['upserted_count']} documents.")
-    except pc.core.client.exceptions.ConnectionError as e:
-        print(f"Connection error: {e}")
+    except PineconeException as e:
+        print(f"Pinecone error: {e}")
     except Exception as e:
         print(f'An unexpected error occurred: {e}')
 

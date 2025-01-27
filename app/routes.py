@@ -8,7 +8,7 @@ import asyncio
 from app.models.weighted_embedding_model import WeightedEmbeddingModel
 from dotenv import load_dotenv
 import os
-from .services.S3Service import fetch_presigned_urls
+from .services.s3_service import S3Service
 
 # PING
 @app.route('/')
@@ -18,22 +18,28 @@ def get_app_health():
 # DEFAULT SHOW ALL BOOKS
 @app.route('/books', methods=['GET'])
 def get_all_books():
+    # Parse input
     page = int(request.args.get('page', 1))
     limit = int(request.args.get('limit', 20))
 
     if page < 1 or limit < 1:
         return jsonify({"error": "Invalid 'page' or 'limit'. Both must be greater than 0."}), 400
 
+    # Retrieve book metadata
     skip = (page - 1) * limit
     cursor = db.books.find().skip(skip).limit(limit)
     books = list(cursor)
+    if not books:
+        return jsonify({"message": "No books found."}), 404
 
+    # Fetch presigned URLs for book covers
+    s3_service = S3Service()
     s3_keys = [book["thumbnail"] for book in books]
-    presigned_urls = asyncio.run(fetch_presigned_urls(s3_keys))
+    presigned_urls = asyncio.run(s3_service.fetch_presigned_urls(s3_keys))
     for book, url in zip(books, presigned_urls):
         book["thumbnail"] = url
 
-    return jsonify(books)
+    return jsonify(books), 200
 
 # CRUD ROUTES
 @app.route('/book/<id>', methods=['GET'])
@@ -41,7 +47,8 @@ def get_book(id):
     try:
         book = db.books.find_one({'isbn_13': id})
         if book:
-            presigned_url = asyncio.run(fetch_presigned_urls([book["thumbnail"]]))[0]
+            s3_service = S3Service()
+            presigned_url = asyncio.run(s3_service.get_presigned_url([book["thumbnail"]]))
             book["thumbnail"] = presigned_url
             return jsonify(book), 200
         else:

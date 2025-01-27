@@ -1,13 +1,13 @@
 from sentence_transformers import SentenceTransformer
 import torch
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 import numpy as np
-import json
-import time
 
 class WeightedEmbeddingModel():
-    def __init__(self, model, batch_size=64, use_mps=True):
+    def __init__(self, batch_size=64, use_mps=True):
+        load_dotenv()
+        model_name = os.getenv("HF_MODEL_NAME")
 
         # Initialize device
         if torch.backends.mps.is_available() and use_mps:
@@ -19,7 +19,7 @@ class WeightedEmbeddingModel():
         self._device = device
 
         # Load model and warm it up
-        self._model = SentenceTransformer(f'sentence-transformers/{model}').to(device)
+        self._model = SentenceTransformer(f'sentence-transformers/{model_name}').to(device)
         self._model.encode('warmup', device=device)
         self._batch_size = batch_size
 
@@ -34,6 +34,7 @@ class WeightedEmbeddingModel():
             'published': 0.5
         }
         self._normalize_weights()
+
 
     def embed(self, books):
         texts = []

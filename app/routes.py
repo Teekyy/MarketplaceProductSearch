@@ -6,8 +6,6 @@ from .schemas import BookSchema, BookUpdateSchema
 from marshmallow import ValidationError
 import asyncio
 from app.models.weighted_embedding_model import WeightedEmbeddingModel
-from dotenv import load_dotenv
-import os
 from .services.s3_service import S3Service
 
 # PING
@@ -72,8 +70,7 @@ def add_book(id):
             return jsonify({'error': 'Book already exists.'}), 400
         
         book = db.books.insert_one(book_data)
-        load_dotenv()
-        model = WeightedEmbeddingModel(os.getenv("HF_MODEL_NAME"), use_mps=True)
+        model = WeightedEmbeddingModel(use_mps=True)
 
 
         return jsonify(book), 200

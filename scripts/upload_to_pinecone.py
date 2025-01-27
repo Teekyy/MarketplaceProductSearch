@@ -23,8 +23,7 @@ def upload_data(file_path):
     chunk_size = 1000  # Size of each chunk
     batch_size = 64 # Size of batch for encoder model
 
-    model_name = os.getenv('HF_MODEL_NAME')
-    model = WeightedEmbeddingModel(model_name, batch_size=batch_size, use_mps=True)
+    model = WeightedEmbeddingModel(batch_size=batch_size, use_mps=True)
 
     # Split data into chunks and embed each chunk
     chunks = create_chunks(books, chunk_size=chunk_size)

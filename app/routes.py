@@ -1,11 +1,14 @@
 
-from flask import jsonify, request, abort
+from flask import jsonify, request
 from app import app, db
 from bson import ObjectId
 from .schemas import BookSchema, BookUpdateSchema
 from marshmallow import ValidationError
 import asyncio
-from .services.s3_utils import fetch_presigned_urls
+from app.models.weighted_embedding_model import WeightedEmbeddingModel
+from dotenv import load_dotenv
+import os
+from .services.S3Service import fetch_presigned_urls
 
 # PING
 @app.route('/')
@@ -19,7 +22,7 @@ def get_all_books():
     limit = int(request.args.get('limit', 20))
 
     if page < 1 or limit < 1:
-        abort(400, description="Invalid 'page' or 'limit'. Both must be greater than 0.") 
+        return jsonify({"error": "Invalid 'page' or 'limit'. Both must be greater than 0."}), 400
 
     skip = (page - 1) * limit
     cursor = db.books.find().skip(skip).limit(limit)
@@ -36,30 +39,44 @@ def get_all_books():
 @app.route('/book/<id>', methods=['GET'])
 def get_book(id):
     try:
-        book = db.books.find_one({'_id': ObjectId(id)})
+        book = db.books.find_one({'isbn_13': id})
         if book:
+            presigned_url = asyncio.run(fetch_presigned_urls([book["thumbnail"]]))[0]
+            book["thumbnail"] = presigned_url
             return jsonify(book), 200
         else:
             return jsonify({'error': 'Book not found.'}), 404
     except Exception as e:
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
     
-@app.route('/book', methods=['POST'])
-def add_book():
+@app.route('/book/<id>', methods=['PUT'])
+def add_book(id):
     schema = BookSchema()
 
     try:
-        data = schema.load(request.json)
-        book = db.books.insert_one(data)
+        # Validate and deserialize input
+        request_data = request.json
+        request_data['isbn_13'] = id
+        book_data = schema.load(request_data)
 
-        return jsonify(book)
+        # Check to see if the book already exists
+        existing_book = db.books.find_one({'isbn_13': id})
+        if existing_book:
+            return jsonify({'error': 'Book already exists.'}), 400
+        
+        book = db.books.insert_one(book_data)
+        load_dotenv()
+        model = WeightedEmbeddingModel(os.getenv("HF_MODEL_NAME"), use_mps=True)
+
+
+        return jsonify(book), 200
     except ValidationError as e:
-        return jsonify({'error': 'Validation Error', 'messages': e.messages}), 400
+        return jsonify({'error': 'Validation Error', 'message': e.messages}), 400
     except Exception as e:
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
     
 
-@app.route('/book/<id>', methods=['PUT'])
+@app.route('/book/<id>', methods=['PATCH'])
 def update_book(id):
     schema = BookUpdateSchema()
 
@@ -70,7 +87,7 @@ def update_book(id):
             {'$set': data}
         )
 
-        return jsonify(book)
+        return jsonify(book), 200
     except ValidationError as e:
         return jsonify({'error': 'Validation Error', 'messages': e.messages}), 400
     except Exception as e:
@@ -80,29 +97,11 @@ def update_book(id):
 @app.route('/book/<id>', methods=['DELETE'])
 def delete_book(id):
     try:
-        result = db.books.delete_one({'_id': ObjectId(id)})
+        result = db.books.delete_one({'isbn_13': id})
 
         if result.deleted_count > 0:
-            return jsonify({'success': 'Book deleted successfully!'})
+            return jsonify({'success': 'Book deleted successfully!'}), 204
         else:
             return jsonify({'error': 'Book not found.'}), 404
     except Exception as e:
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
-
-
-# INSTANCE DEMONSTRATION ROUTES
-@app.route('/instance', methods=['POST'])
-def create_instance():
-    pass
-
-@app.route('/instance', methods=['DELETE'])
-def delete_instance():
-    pass
-
-@app.route('/instance/<id>/start', methods=['POST'])
-def start_traffic():
-    pass
-
-@app.route('/instance/<id>/stop', methods=['POST'])
-def stop_traffic():
-    pass

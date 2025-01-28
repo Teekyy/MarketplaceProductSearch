@@ -1,20 +1,30 @@
 
-from flask import jsonify, request
-from app import app, db
+from flask import Blueprint, jsonify, request
 from bson import ObjectId
 from .schemas import BookSchema, BookUpdateSchema
 from marshmallow import ValidationError
 import asyncio
+from dotenv import load_dotenv
+import os
 from app.models.weighted_embedding_model import WeightedEmbeddingModel
-from .services.s3_service import S3Service
+from pinecone import Pinecone
+from pinecone.exceptions import PineconeException
+from ..services.s3_service import S3Service
+from ..extensions import mongo
+from ..services.book_service import BookService
+
+books_api = Blueprint('books_api', __name__, url_prefix='/api/v1')
+db = mongo.cx['marketplace']
+book_service = BookService(db)
 
 # PING
-@app.route('/')
+@books_api.route('/')
 def get_app_health():
     return "Welcome to the Sci-Fi Book Marketplace!"
 
+
 # DEFAULT SHOW ALL BOOKS
-@app.route('/books', methods=['GET'])
+@books_api.route('/books', methods=['GET'])
 def get_all_books():
     # Parse input
     page = int(request.args.get('page', 1))
@@ -39,8 +49,9 @@ def get_all_books():
 
     return jsonify(books), 200
 
+
 # CRUD ROUTES
-@app.route('/book/<id>', methods=['GET'])
+@books_api.route('/book/<id>', methods=['GET'])
 def get_book(id):
     try:
         book = db.books.find_one({'isbn_13': id})
@@ -53,8 +64,9 @@ def get_book(id):
             return jsonify({'error': 'Book not found.'}), 404
     except Exception as e:
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
-    
-@app.route('/book/<id>', methods=['PUT'])
+
+
+@books_api.route('/book/<id>', methods=['PUT'])
 def add_book(id):
     schema = BookSchema()
 
@@ -69,8 +81,17 @@ def add_book(id):
         if existing_book:
             return jsonify({'error': 'Book already exists.'}), 400
         
+        # Insert book metadata
         book = db.books.insert_one(book_data)
+        # Embed book metadata
+        load_dotenv()
         model = WeightedEmbeddingModel(use_mps=True)
+        embedding = model.embed([book_data])[0]
+        pc = Pinecone()
+        index = pc.Index(host=os.getenv("PINECONE_INDEX_HOST"))
+        result = index.upsert(vectors=[(book_data['isbn_13'], embedding)])
+        # Upload to thumbnail to S3
+
 
 
         return jsonify(book), 200
@@ -80,7 +101,7 @@ def add_book(id):
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
     
 
-@app.route('/book/<id>', methods=['PATCH'])
+@books_api.route('/book/<id>', methods=['PATCH'])
 def update_book(id):
     schema = BookUpdateSchema()
 
@@ -98,7 +119,7 @@ def update_book(id):
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
      
 
-@app.route('/book/<id>', methods=['DELETE'])
+@books_api.route('/book/<id>', methods=['DELETE'])
 def delete_book(id):
     try:
         result = db.books.delete_one({'isbn_13': id})

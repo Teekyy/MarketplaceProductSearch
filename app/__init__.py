@@ -1,17 +1,21 @@
 from flask import Flask
-from flask_pymongo import PyMongo
 from dotenv import load_dotenv
 import os
+from .extensions import mongo
 from .custom_json_encoder import CustomJSONEncoder
+from app.api.books import books_api
 
-load_dotenv()
 
-app = Flask(__name__)
-app.config['MONGO_URI'] = os.getenv('MONGO_URI')
-mongo = PyMongo(app)
+def create_app():
+    load_dotenv()
 
-db = mongo.cx['marketplace']
+    app = Flask(__name__)
+    app.config['MONGO_URI'] = os.getenv('MONGO_URI')
 
-app.json = CustomJSONEncoder(app)
+    mongo.init_app(app)
+    
+    app.json = CustomJSONEncoder(app)
 
-from app import routes
+    app.register_blueprint(books_api)
+
+    return app

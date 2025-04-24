@@ -15,8 +15,13 @@ import argparse
 
 async def erase_data(s3=False, mongodb=False, pinecone=False):
     """
-    Delete book data from S3, MongoDB, and Pinecone asyncrhonously.
+    Delete book data from S3, MongoDB, and Pinecone asynchronously.
     We are using threads instead of true asynchronous, because most of the operations are single API calls.
+
+    Args:
+        s3 (bool): Flag to erase data from S3.
+        mongodb (bool): Flag to erase data from MongoDB.
+        pinecone (bool): Flag to erase data from Pinecone.
     """
     load_dotenv()
 

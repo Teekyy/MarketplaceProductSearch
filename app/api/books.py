@@ -1,73 +1,98 @@
 
 from flask import Blueprint, jsonify, request
-from bson import ObjectId
 from .schemas import BookSchema, BookUpdateSchema
 from marshmallow import ValidationError
-import asyncio
 from dotenv import load_dotenv
 import os
-from app.models.weighted_embedding_model import WeightedEmbeddingModel
-from pinecone import Pinecone
-from pinecone.exceptions import PineconeException
 from ..services.s3_service import S3Service
 from ..extensions import mongo
 from ..services.book_service import BookService
 
+# Configure api, database, and services
 books_api = Blueprint('books_api', __name__, url_prefix='/api/v1')
 db = mongo.cx['marketplace']
-book_service = BookService(db)
+s3_service = S3Service()
+book_service = BookService(db, s3_service)
 
 # PING
 @books_api.route('/')
 def get_app_health():
-    return "Welcome to the Sci-Fi Book Marketplace!"
+    return "Welcome to the Sci-Fi Book Catalog!"
 
 
 # DEFAULT SHOW ALL BOOKS
 @books_api.route('/books', methods=['GET'])
-def get_all_books():
+async def get_books():
+    """
+    Retrieves a list of books with pagination.
+    
+    Query Parameters:
+        page (int): The page number to retrieve (default: 1).
+        limit (int): The number of books to retrieve per page (default: 20).
+    
+    Returns:
+        JSON: List of book objects with presigned URLs for thumbnails
+    """
     # Parse input
     page = int(request.args.get('page', 1))
     limit = int(request.args.get('limit', 20))
 
+    # Validate input
     if page < 1 or limit < 1:
-        return jsonify({"error": "Invalid 'page' or 'limit'. Both must be greater than 0."}), 400
+        return jsonify({
+            "error": "Invalid parameters",
+            "message": "Page and limit must be greater than 0"
+        }), 400
 
-    # Retrieve book metadata
-    skip = (page - 1) * limit
-    cursor = db.books.find().skip(skip).limit(limit)
-    books = list(cursor)
-    if not books:
-        return jsonify({"message": "No books found."}), 404
-
-    # Fetch presigned URLs for book covers
-    s3_service = S3Service()
-    s3_keys = [book["thumbnail"] for book in books]
-    presigned_urls = asyncio.run(s3_service.fetch_presigned_urls(s3_keys))
-    for book, url in zip(books, presigned_urls):
-        book["thumbnail"] = url
+    # Get books
+    books = await book_service.retrieve_books(page, limit)
 
     return jsonify(books), 200
 
 
 # CRUD ROUTES
 @books_api.route('/book/<id>', methods=['GET'])
-def get_book(id):
+async def get_book(id):
+    """
+    Retrieve a single book.
+
+    Query Parameters:
+        id (str): The ISBN-13 of the book to retrieve.
+
+    Returns:
+        JSON: Book object with presigned URL for thumbnail
+    """
+    # Validate input
+    if not id.isdigit() or len(id) != 13:
+        return jsonify({
+            'error': 'Invalid ISBN-13 format.',
+            'message': 'ISBN-13 must be a 13-digit number.'
+        }), 400
+
+    # Get book
     try:
-        book = db.books.find_one({'isbn_13': id})
-        if book:
-            s3_service = S3Service()
-            presigned_url = asyncio.run(s3_service.get_presigned_url([book["thumbnail"]]))
-            book["thumbnail"] = presigned_url
-            return jsonify(book), 200
-        else:
+        book = await book_service.retrieve_book(id)
+        if not book:
             return jsonify({'error': 'Book not found.'}), 404
+        return jsonify(book), 200
     except Exception as e:
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
 
 
 @books_api.route('/book/<id>', methods=['PUT'])
-def add_book(id):
+async def add_book(id):
+    """
+    Add a new book to the database.
+
+    Query Parameters:
+        id (str): The ISBN-13 of the book to add.
+
+    Request Body:
+        JSON: Book metadata (title, author, genre, etc.)
+
+    Returns:
+        JSON: Book object with presigned URL for thumbnail
+    """
     schema = BookSchema()
 
     try:
@@ -75,12 +100,9 @@ def add_book(id):
         request_data = request.json
         request_data['isbn_13'] = id
         book_data = schema.load(request_data)
-
-        # Check to see if the book already exists
-        existing_book = db.books.find_one({'isbn_13': id})
-        if existing_book:
-            return jsonify({'error': 'Book already exists.'}), 400
         
+        # TODO: USE BOOK_SERVICE TO STORE BOOK
+
         # Insert book metadata
         book = db.books.insert_one(book_data)
         # Embed book metadata
@@ -103,8 +125,21 @@ def add_book(id):
 
 @books_api.route('/book/<id>', methods=['PATCH'])
 def update_book(id):
+    """
+    Update an existing book in the database.
+
+    Query Parameters:
+        id (str): The ISBN-13 of the book to update.
+
+    Request Body:
+        JSON: Partial book metadata (title, author, genre, etc.)
+
+    Returns:
+        JSON: Updated book object
+    """
     schema = BookUpdateSchema()
 
+    # TODO: USE BOOK_SERVICE TO UPDATE BOOK
     try:
         data = schema.load(request.json)
         book = db.books.update_one(
@@ -121,6 +156,17 @@ def update_book(id):
 
 @books_api.route('/book/<id>', methods=['DELETE'])
 def delete_book(id):
+    """
+    Delete a book from the database.
+
+    Query Parameters:
+        id (str): The ISBN-13 of the book to delete.
+
+    Returns:
+        JSON: Success message
+    """
+
+    # TODO: USE BOOK_SERVICE TO DELETE BOOK
     try:
         result = db.books.delete_one({'isbn_13': id})
 

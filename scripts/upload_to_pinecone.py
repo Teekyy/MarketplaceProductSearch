@@ -10,6 +10,12 @@ from pinecone.exceptions import PineconeException
 
 
 def upload_data(file_path):
+    """
+    Uploads book data to Pinecone vector index from book JSON file.
+
+    Args:
+        file_path (str): Path to the book data file.
+    """
     load_dotenv()
     
     # Load book data from JSON file

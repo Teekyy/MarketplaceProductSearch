@@ -8,9 +8,15 @@ import argparse
 
 async def populate_data(file_path, s3=False, mongodb=False, pinecone=False):
     """
-    Upload book data to S3, MongoDB, and Pinecone asynchronously
+    Upload book data to S3, MongoDB, and Pinecone asynchronously.
     MongoDB is locally run, and Pinecone is a single API, so no point in using asynchronous functions,
-    and better to use threading instead
+    and better to use threading instead.
+
+    Args:
+        file_path (str): Path to the book data file.
+        s3 (bool): Flag to upload data to S3.
+        mongodb (bool): Flag to upload data to MongoDB.
+        pinecone (bool): Flag to upload data to Pinecone.
     """
 
     if not s3 and not mongodb and not pinecone:

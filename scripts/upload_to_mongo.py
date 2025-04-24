@@ -8,6 +8,12 @@ from utils.helpers import generate_s3_key
 
 
 def upload_data(file_path):
+    """
+    Uploads book data to local MondoDB instance from book JSON file.
+
+    Args:
+        file_path (str): Path to the book data file.
+    """
     load_dotenv()
 
     # Load MongoDB info

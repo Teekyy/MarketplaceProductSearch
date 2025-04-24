@@ -1,6 +1,10 @@
 from marshmallow import Schema, fields, validate
 
 class BookSchema(Schema):
+    """
+    Schema for validating and deserializing complete book data.
+    Used for book creation.
+    """
     isbn_13 = fields.Str(required=True, validate=validate.And(
         validate.Length(equal=13),
         validate.Regexp('^[0-9]+$', error="ISBN must be numeric")
@@ -15,7 +19,11 @@ class BookSchema(Schema):
     published_year = fields.Int(required=True, validate=validate.Range(min=1970, max=2024))
 
 class BookUpdateSchema(Schema):
-    isbn_13 = fields.Str(validate=validate.And(
+    """
+    Schema for validating and deserializing partial book data.
+    Used for updating book information.
+    """
+    isbn_13 = fields.Str(required=True, validate=validate.And(
         validate.Length(equal=13),
         validate.Regexp('^[0-9]+$', error="ISBN must be numeric")
     ))

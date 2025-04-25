@@ -3,9 +3,17 @@ from pymongo.errors import BulkWriteError
 from dotenv import load_dotenv
 import os
 import json
+import time
 from utils.helpers import generate_s3_key
 
+
 def upload_data(file_path):
+    """
+    Uploads book data to local MondoDB instance from book JSON file.
+
+    Args:
+        file_path (str): Path to the book data file.
+    """
     load_dotenv()
 
     # Load MongoDB info
@@ -30,6 +38,13 @@ def upload_data(file_path):
         print("An error occurred while inserting documents:", e.details)
     except Exception as e:
         print(f'An unexpected error occurred: {e}')
+    finally:
+        client.close()
+
 
 if __name__ == '__main__':
+    start = time.time()
     upload_data('data/books.json')
+    end = time.time()
+    time_elapsed = end - start
+    print(f'Time elapsed: {time_elapsed} seconds')

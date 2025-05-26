@@ -4,8 +4,8 @@ class Config:
     """
     Base configuration class.
     """
-    MONGO_URI =os.getenv('MONGO_URI', 'mongodb://localhost:27017/')
-    MONGO_DB = os.getenv('MONGO_DB', 'catalogue')
+    MONGO_URI =os.getenv('MONGO_URI')
+    MONGO_DB = os.getenv('MONGO_DB')
 
     AWS_BUCKET_NAME = os.getenv('AWS_BUCKET_NAME')
     AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')

@@ -11,16 +11,18 @@ class WeightedEmbeddingModel():
     Weights are applied to different fields of the book data to create a combined embedding.
     """
 
-    def __init__(self, batch_size=64, use_mps=True):
+    def __init__(self, model_name=None, batch_size=64, use_mps=True):
         """
         Initializes the WeightedEmbeddingModel with a SentenceTranformer model and warms it up. Sets the device to use mps if available.
 
         Args:
+            model_name (str): The name of the HF model.
             batch_size (int): The batch size for encoding.
             use_mps (bool): Flag to use MPS device if available.
         """
         logger.info("Initializing WeightedEmbeddingModel")
-        model_name = current_app.config["HF_MODEL_NAME"]
+        if not model_name:
+            model_name = current_app.config["HF_MODEL_NAME"]
 
         # Initialize device
         if torch.backends.mps.is_available() and use_mps:

@@ -6,15 +6,20 @@ import os
 from ..services.s3_service import S3Service
 from ..services.book_service import BookService
 from utils.logger import logger
+from datetime import datetime, timezone
 
 
 books_api = Blueprint('books_api', __name__, url_prefix='/api/v1')
-s3_service = S3Service()
-book_service = BookService(s3_service)
 
 # PING
-@books_api.route('/')
+@books_api.route('/health')
 def get_app_health():
+    return { 'status': 'healthy', 'timestamp': datetime.now(timezone.utc).isoformat()}
+
+
+# HOME
+@books_api.route('/')
+def home():
     return "Welcome to the Sci-Fi Book Catalog!"
 
 

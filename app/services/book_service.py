@@ -9,6 +9,10 @@ class BookService:
     def __init__(self, db, s3_service):
         """
         Initializes the BookService with a database connection and an S3 service instance.
+
+        Args:
+            db (Database): The database connection to use for book data.
+            s3_service (S3Service): An instance of S3Service to handle S3 operations.
         """
         logger.info("Initializing BookService")
         self._db = db

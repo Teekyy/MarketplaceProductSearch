@@ -2,7 +2,7 @@ import json
 import os
 import time
 from tqdm import tqdm
-from app.models.weighted_embedding_model import WeightedEmbeddingModel
+from app.models import WeightedEmbeddingModel
 import math
 from pinecone import Pinecone
 

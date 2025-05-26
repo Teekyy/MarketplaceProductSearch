@@ -3,6 +3,7 @@ import torch
 import os
 import numpy as np
 from utils.logger import logger
+from flask import current_app
 
 class WeightedEmbeddingModel():
     """
@@ -19,7 +20,7 @@ class WeightedEmbeddingModel():
             use_mps (bool): Flag to use MPS device if available.
         """
         logger.info("Initializing WeightedEmbeddingModel")
-        model_name = os.getenv("HF_MODEL_NAME")
+        model_name = current_app.config["HF_MODEL_NAME"]
 
         # Initialize device
         if torch.backends.mps.is_available() and use_mps:

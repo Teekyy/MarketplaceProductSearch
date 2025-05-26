@@ -19,7 +19,7 @@ def upload_data(file_path):
     # Load MongoDB info
     mongo_uri = os.getenv("MONGO_URI")
     client = MongoClient(mongo_uri)
-    db = client["marketplace"]
+    db = client[os.getenv("MONGO_DB")]
     collection = db['books']
 
     # Load book data from JSON file

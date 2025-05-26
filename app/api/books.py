@@ -4,17 +4,13 @@ from .schemas import BookSchema, BookUpdateSchema
 from marshmallow import ValidationError
 import os
 from ..services.s3_service import S3Service
-from ..extensions import mongo
 from ..services.book_service import BookService
 from utils.logger import logger
 
 
-# Configure api, database, and services
 books_api = Blueprint('books_api', __name__, url_prefix='/api/v1')
-db = mongo.cx['marketplace']
 s3_service = S3Service()
-book_service = BookService(db, s3_service)
-
+book_service = BookService(s3_service)
 
 # PING
 @books_api.route('/')
@@ -127,7 +123,7 @@ async def add_book(id):
         # Embed book metadata
         model = WeightedEmbeddingModel(use_mps=True)
         embedding = model.embed([book_data])[0]
-        pc = Pinecone()
+        pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
         index = pc.Index(host=os.getenv("PINECONE_INDEX_HOST"))
         result = index.upsert(vectors=[(book_data['isbn_13'], embedding)])
         # Upload to thumbnail to S3

@@ -1,8 +1,8 @@
-import os
 import asyncio
 import aioboto3
 import botocore.exceptions
 from utils.logger import logger
+from flask import current_app
 
 class S3Service:
     """
@@ -14,13 +14,13 @@ class S3Service:
         Creates an instance of S3Service and an async session with AWS.
         """
         logger.info("Initializing S3Service")
-        self._bucket_name = os.getenv('AWS_BUCKET_NAME')
+        self._bucket_name = current_app.config['AWS_BUCKET_NAME']
 
         # Create session
         self.session = aioboto3.Session(
-            region_name=os.getenv('AWS_REGION'),
-            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+            region_name=current_app.config['AWS_REGION'],
+            aws_access_key_id=current_app.config['AWS_ACCESS_KEY_ID'],
+            aws_secret_access_key=current_app.config['AWS_SECRET_ACCESS_KEY']
         )
 
 

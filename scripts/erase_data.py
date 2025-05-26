@@ -75,7 +75,7 @@ def erase_mongodb_data():
     # Load MongoDB info
     mongo_uri = os.getenv("MONGO_URI")
     client = MongoClient(mongo_uri)
-    db = client["marketplace"]
+    db = client[os.getenv("MONGO_DB")]
     collection = db['books']
 
     try:
@@ -96,7 +96,7 @@ def erase_pinecone_data():
     """
 
     # Initialize Pinecone
-    pc = Pinecone()
+    pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
     index = pc.Index(host=os.getenv("PINECONE_INDEX_HOST"))
 
     try:

@@ -29,20 +29,40 @@ async def erase_data(s3=False, mongodb=False, pinecone=False):
         print("No services specified for erasing book data.")
         return
 
-    try:
-        tasks = []
+    # Create async tasks
+    tasks = []
+    services = []
 
-        if s3:
-            tasks.append(asyncio.to_thread(erase_s3_data))
-        if mongodb:
-            tasks.append(asyncio.to_thread(erase_mongodb_data))
-        if pinecone:
-            tasks.append(asyncio.to_thread(erase_pinecone_data))
+    if s3:
+        tasks.append(asyncio.to_thread(erase_s3_data))
+        services.append("S3")
+    if mongodb:
+        tasks.append(asyncio.to_thread(erase_mongodb_data))
+        services.append("MongoDB")
+    if pinecone:
+        tasks.append(asyncio.to_thread(erase_pinecone_data))
+        services.append("Pinecone")
 
-        await asyncio.gather(*tasks)
-        print("Book data erased from specified services successfully!")
-    except Exception as e:
-        print(f"An error occurred: {e}")
+    # Execute tasks and gather results
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    failed_services, success_count = [], 0
+
+    # Figure out which services failed
+    for (result, service) in zip(results, services):
+        if isinstance(result, Exception):
+            failed_services.append(service)
+            print(f"{service} failed to delete book data: {result}")
+        else:
+            success_count += 1
+            print(f"{service} book data deletion succeded!")
+
+    # Display message based on successes
+    if success_count == len(services):
+        print("✅ Book data deleted in specified services!")
+    elif success_count > 0:
+        print(f"⚠️ The following services failed: {', '.join(failed_services)}")
+    else:
+        print(f"❌ Failed to delete book data in all services.")
 
 
 def erase_s3_data():
@@ -55,17 +75,11 @@ def erase_s3_data():
     access_key_id = os.getenv('AWS_ACCESS_KEY_ID')
     secret_access_key = os.getenv('AWS_SECRET_ACCESS_KEY')
  
-    try:
-        # Create client for S3
-        s3_resource = boto3.resource('s3', region_name=region, aws_access_key_id=access_key_id, aws_secret_access_key=secret_access_key)
-        # Retrieve bucket and delete all objects
-        bucket = s3_resource.Bucket(bucket_name)
-        bucket.objects.filter(Prefix='thumbnails/').delete()
-        print(f"Successfully emptied bucket: {bucket_name}")
-    except botocore.exceptions.ClientError as e:
-        print(f"An AWS service error occured: {e}")
-    except Exception as e:
-        print(f"An error occured: {e}")
+    # Create client for S3
+    s3_resource = boto3.resource('s3', region_name=region, aws_access_key_id=access_key_id, aws_secret_access_key=secret_access_key)
+    # Retrieve bucket and delete all objects
+    bucket = s3_resource.Bucket(bucket_name)
+    bucket.objects.filter(Prefix='thumbnails/').delete()
 
 
 def erase_mongodb_data():
@@ -78,16 +92,9 @@ def erase_mongodb_data():
     db = client[os.getenv("MONGO_DB")]
     collection = db['books']
 
-    try:
-        # Delete all documents
-        result = collection.delete_many({})
-        print(f"Deleted {result.deleted_count} documents.")
-    except BulkWriteError as e:
-        print("An error occurred while deleting documents:", e.details)
-    except Exception as e:
-        print(f'An unexpected error occurred: {e}')
-    finally:
-        client.close()
+    # Delete all documents
+    result = collection.delete_many({})
+    print(f"Deleted {result.deleted_count} documents.")
 
 
 def erase_pinecone_data():
@@ -102,13 +109,8 @@ def erase_pinecone_data():
     try:
         # Delete all vectors
         result = index.delete(delete_all=True)
-        print(f"Deleted all vectors.")
     except NotFoundException as e:
         print("No vectors to delete in Pinecone index.")
-    except PineconeException as e:
-        print(f"Pinecone error: {e}.")
-    except Exception as e:
-        print(f'An unexpected error occurred: {e}.')
 
 
 if __name__ == '__main__':

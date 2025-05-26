@@ -1,8 +1,9 @@
 from sentence_transformers import SentenceTransformer
 import torch
 import os
-from dotenv import load_dotenv
 import numpy as np
+from utils.logger import logger
+from flask import current_app
 
 class WeightedEmbeddingModel():
     """
@@ -18,19 +19,20 @@ class WeightedEmbeddingModel():
             batch_size (int): The batch size for encoding.
             use_mps (bool): Flag to use MPS device if available.
         """
-        load_dotenv()
-        model_name = os.getenv("HF_MODEL_NAME")
+        logger.info("Initializing WeightedEmbeddingModel")
+        model_name = current_app.config["HF_MODEL_NAME"]
 
         # Initialize device
         if torch.backends.mps.is_available() and use_mps:
             device = torch.device("mps")
-            print("Using MPS device")
+            logger.debug("Using MPS device")
         else:
             device = torch.device("cpu")
             print("MPS device not found, using CPU")
         self._device = device
 
         # Load model and warm it up
+        logger.debug(f"Loading model: sentence-transformers/{model_name}")
         self._model = SentenceTransformer(f'sentence-transformers/{model_name}').to(device)
         self._model.encode('warmup', device=device)
         self._batch_size = batch_size
@@ -58,6 +60,7 @@ class WeightedEmbeddingModel():
         Returns:
             list: A list of vectors representing the weighted embeddings of the books.
         """
+        logger.debug(f"Generating weighted embeddings for {len(books)} books")
         # Flattened array that contains texts from each field for all the books. 
         # Ex: ['title1', 'author1', 'description1', ..., 'title2', 'author2', 'description2', ...]
         # Dimensions: (books * num_fields,)
@@ -83,6 +86,7 @@ class WeightedEmbeddingModel():
                 device=self._device,
                 batch_size=self._batch_size
             ))
+        logger.debug(f"Generated {len(embeddings)} embeddings with shape {embeddings.shape}")
 
         # Create a new array to store the combined weighted embeddings
         # Dimensions: (books, embedding_dim)

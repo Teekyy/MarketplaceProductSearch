@@ -23,7 +23,7 @@ def upload_data(file_path):
         books = json.load(file)
 
     # Initialize Pinecone
-    pc = Pinecone()
+    pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
     index = pc.Index(host=os.getenv("PINECONE_INDEX_HOST"))
 
     chunk_size = 1000  # Size of each chunk

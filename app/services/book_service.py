@@ -1,4 +1,5 @@
 from ..exceptions import BookExistsError
+from utils.logger import logger
 
 class BookService:
     """
@@ -9,6 +10,7 @@ class BookService:
         """
         Initializes the BookService with a database connection and an S3 service instance.
         """
+        logger.info("Initializing BookService")
         self._db = db
         self._s3 = s3_service
 
@@ -26,15 +28,19 @@ class BookService:
             None: If no books are found.
         """
         # Retrieve book metadata from db
+        logger.debug(f"Retrieving books: page={page}, limit={limit}")
         skip = (page - 1) * limit
         cursor = self._db.books.find().skip(skip).limit(limit)
         books = list(cursor)
+        logger.debug(f"Retrieved {len(books)} books from the database")
         
         # Fetch presigned URLs for book covers
-        s3_keys = [book["thumbnail"] for book in books]
-        presigned_urls = await self._s3.fetch_presigned_urls(s3_keys)
-        for book, url in zip(books, presigned_urls):
-            book["thumbnail"] = url
+        if books:
+            logger.debug(f"Fetching presigned URLs for {len(books)} books")
+            s3_keys = [book["thumbnail"] for book in books]
+            presigned_urls = await self._s3.fetch_presigned_urls(s3_keys)
+            for book, url in zip(books, presigned_urls):
+                book["thumbnail"] = url
         
         return books
     
@@ -51,10 +57,12 @@ class BookService:
             None: If the book is not found.
         """
         # Retrieve book metadata from db
+        logger.debug(f"Retrieving book with ISBN-13: {isbn_13}")
         book = self._db.books.find_one({'isbn_13': isbn_13})
 
         # Fetch presigned URL for book cover
         if book:
+            logger.debug(f"Book found: {book}. Fetching presigned URL for cover")
             presigned_url = await self._s3.fetch_presigned_url([book["thumbnail"]])
             book["thumbnail"] = presigned_url
         return book

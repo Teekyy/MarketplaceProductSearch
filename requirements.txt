@@ -14,7 +14,6 @@ click==8.1.7
 dnspython==2.6.1
 filelock==3.15.4
 Flask==3.0.3
-Flask-PyMongo==2.3.0
 frozenlist==1.4.1
 fsspec==2024.6.1
 huggingface-hub==0.23.4

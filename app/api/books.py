@@ -2,17 +2,15 @@
 from flask import Blueprint, jsonify, request
 from .schemas import BookSchema, BookUpdateSchema
 from marshmallow import ValidationError
-from dotenv import load_dotenv
 import os
 from ..services.s3_service import S3Service
-from ..extensions import mongo
 from ..services.book_service import BookService
+from utils.logger import logger
 
-# Configure api, database, and services
+
 books_api = Blueprint('books_api', __name__, url_prefix='/api/v1')
-db = mongo.cx['marketplace']
 s3_service = S3Service()
-book_service = BookService(db, s3_service)
+book_service = BookService(s3_service)
 
 # PING
 @books_api.route('/')
@@ -34,19 +32,29 @@ async def get_books():
         JSON: List of book objects with presigned URLs for thumbnails
     """
     # Parse input
+    logger.info(f"GET /books request received with params: page={request.args.get('page')}, limit={request.args.get('limit')}")
     page = int(request.args.get('page', 1))
     limit = int(request.args.get('limit', 20))
 
     # Validate input
     if page < 1 or limit < 1:
+        logger.warning(f"Invalid parameters: page={page}, limit={limit}")
         return jsonify({
             "error": "Invalid parameters",
             "message": "Page and limit must be greater than 0"
         }), 400
 
     # Get books
-    books = await book_service.retrieve_books(page, limit)
-
+    try:
+        books = await book_service.retrieve_books(page, limit)
+    except Exception as e:
+        logger.exception(f"Error retrieving books: {str(e)}")
+        return jsonify({
+            'error': 'Internal Server Error',
+            'message': str(e)
+        }), 500
+    
+    logger.info(f"Returning {len(books)} books")
     return jsonify(books), 200
 
 
@@ -63,7 +71,9 @@ async def get_book(id):
         JSON: Book object with presigned URL for thumbnail
     """
     # Validate input
+    logger.info(f"GET /book/{id} request received")
     if not id.isdigit() or len(id) != 13:
+        logger.warning(f"Invalid ISBN-13 format: {id}")
         return jsonify({
             'error': 'Invalid ISBN-13 format.',
             'message': 'ISBN-13 must be a 13-digit number.'
@@ -73,10 +83,14 @@ async def get_book(id):
     try:
         book = await book_service.retrieve_book(id)
         if not book:
+            logger.warning(f"Book not found: {id}")
             return jsonify({'error': 'Book not found.'}), 404
-        return jsonify(book), 200
     except Exception as e:
+        logger.exception(f"Error retrieving book: {str(e)}")
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+    
+    logger.info(f"Book found: {book}")
+    return jsonify(book), 200
 
 
 @books_api.route('/book/<id>', methods=['PUT'])
@@ -93,6 +107,7 @@ async def add_book(id):
     Returns:
         JSON: Book object with presigned URL for thumbnail
     """
+    logger.info(f"PUT /book/{id} request received with data: {request.json}")
     schema = BookSchema()
 
     try:
@@ -106,21 +121,25 @@ async def add_book(id):
         # Insert book metadata
         book = db.books.insert_one(book_data)
         # Embed book metadata
-        load_dotenv()
         model = WeightedEmbeddingModel(use_mps=True)
         embedding = model.embed([book_data])[0]
-        pc = Pinecone()
+        pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
         index = pc.Index(host=os.getenv("PINECONE_INDEX_HOST"))
         result = index.upsert(vectors=[(book_data['isbn_13'], embedding)])
         # Upload to thumbnail to S3
 
 
 
-        return jsonify(book), 200
     except ValidationError as e:
+        logger.warning(f"Validation error: {e.messages}")
         return jsonify({'error': 'Validation Error', 'message': e.messages}), 400
     except Exception as e:
+        logger.exception(f"Error adding book: {str(e)}")
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+    
+    logger.info(f"Book added successfully: {book}")
+    return jsonify(book), 200
+
     
 
 @books_api.route('/book/<id>', methods=['PATCH'])
@@ -137,6 +156,7 @@ def update_book(id):
     Returns:
         JSON: Updated book object
     """
+    logger.info(f"PATCH /book/{id} request received with data: {request.json}")
     schema = BookUpdateSchema()
 
     # TODO: USE BOOK_SERVICE TO UPDATE BOOK
@@ -147,11 +167,16 @@ def update_book(id):
             {'$set': data}
         )
 
-        return jsonify(book), 200
     except ValidationError as e:
+        logger.warning(f"Validation error: {e.messages}")
         return jsonify({'error': 'Validation Error', 'messages': e.messages}), 400
     except Exception as e:
+        logger.exception(f"Error updating book: {str(e)}")
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+    
+    logger.info(f"Book updated successfully: {book}")
+    return jsonify(book), 200
+
      
 
 @books_api.route('/book/<id>', methods=['DELETE'])
@@ -165,14 +190,17 @@ def delete_book(id):
     Returns:
         JSON: Success message
     """
-
+    logger.info(f"DELETE /book/{id} request received")
     # TODO: USE BOOK_SERVICE TO DELETE BOOK
     try:
         result = db.books.delete_one({'isbn_13': id})
-
-        if result.deleted_count > 0:
-            return jsonify({'success': 'Book deleted successfully!'}), 204
-        else:
-            return jsonify({'error': 'Book not found.'}), 404
     except Exception as e:
+        logger.exception(f"Error deleting book: {str(e)}")
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+    
+    if result.deleted_count > 0:
+        logger.info(f"Book deleted successfully with id {id}")
+        return jsonify({'success': 'Book deleted successfully!'}), 204
+    else:
+        logger.warning(f"Book not found with id {id}")
+        return jsonify({'error': 'Book not found.'}), 404

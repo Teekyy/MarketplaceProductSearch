@@ -1,8 +1,8 @@
-import os
 import asyncio
 import aioboto3
 import botocore.exceptions
-from dotenv import load_dotenv
+from utils.logger import logger
+from flask import current_app
 
 class S3Service:
     """
@@ -13,15 +13,14 @@ class S3Service:
         """
         Creates an instance of S3Service and an async session with AWS.
         """
-        load_dotenv()
-
-        self._bucket_name = os.getenv('AWS_BUCKET_NAME')
+        logger.info("Initializing S3Service")
+        self._bucket_name = current_app.config['AWS_BUCKET_NAME']
 
         # Create session
         self.session = aioboto3.Session(
-            region_name=os.getenv('AWS_REGION'),
-            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+            region_name=current_app.config['AWS_REGION'],
+            aws_access_key_id=current_app.config['AWS_ACCESS_KEY_ID'],
+            aws_secret_access_key=current_app.config['AWS_SECRET_ACCESS_KEY']
         )
 
 
@@ -42,6 +41,7 @@ class S3Service:
         Returns:
             list: A list of presigned URLs.
         """
+        logger.debug(f"Fetching presigned URLs for {len(s3_keys)} keys")
         async with await self.get_client as s3_client:
             tasks = []
             for s3_key in s3_keys:
@@ -61,6 +61,7 @@ class S3Service:
         Returns:
             str: The presigned URL.
         """
+        logger.debug(f"Fetching presigned URL for key: {s3_key}")
         async with await self.get_client as s3_client:
             return await self._generate_presigned_url(s3_client, s3_key)
 
@@ -77,6 +78,7 @@ class S3Service:
         Returns:
             str: The presigned URL.
         """
+        logger.debug(f"Generating presigned URL for key: {s3_key}")
         try:
             response = await s3_client.generate_presigned_url(
                 ClientMethod = 'get_object',
@@ -89,8 +91,8 @@ class S3Service:
 
             return response
         except botocore.exceptions.ClientError as e:
-            print(f"An AWS service error occurred: {e}")
+            logger.error(f"An AWS service error occured while generating presigned URL for s3 key {s3_key}: {e}")
         except Exception as e:
-            print(f"An error occurred: {e}")
+            logger.error(f"An error occured while generating presigned URL for s3 key {s3_key}: {e}")
 
         return None

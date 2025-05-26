@@ -1,6 +1,5 @@
 from pymongo import MongoClient
 from pymongo.errors import BulkWriteError
-from dotenv import load_dotenv
 import os
 import json
 import time
@@ -14,8 +13,6 @@ def upload_data(file_path):
     Args:
         file_path (str): Path to the book data file.
     """
-    load_dotenv()
-
     # Load MongoDB info
     mongo_uri = os.getenv("MONGO_URI")
     client = MongoClient(mongo_uri)
@@ -34,10 +31,6 @@ def upload_data(file_path):
     try:
         result = collection.insert_many(books)
         print(f"Inserted {len(result.inserted_ids)} documents.")
-    except BulkWriteError as e:
-        print("An error occurred while inserting documents:", e.details)
-    except Exception as e:
-        print(f'An unexpected error occurred: {e}')
     finally:
         client.close()
 

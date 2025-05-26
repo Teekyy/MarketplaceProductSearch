@@ -4,7 +4,6 @@ import botocore.exceptions
 import aiohttp
 import os
 import json
-from dotenv import load_dotenv
 from io import BytesIO
 from tqdm.asyncio import tqdm as atqdm
 import time
@@ -18,9 +17,6 @@ async def upload_data(file_path):
     Args:
         file_path (str): The path to the JSON file containing book data.
     """
-
-    load_dotenv()
-
     # Retrieve AWS credentials for client
     bucket_name = os.getenv('AWS_BUCKET_NAME')
     region = os.getenv('AWS_REGION')
@@ -97,7 +93,7 @@ async def download_and_upload_thumbnail(session, s3_client, thumbnail_url, bucke
             else:
                 print(f'Failed to download image from {thumbnail_url}. Status: {response.status}')
     except aiohttp.ClientError as e:
-        print(f'HTTP client error occured: {e}')
+        print(f'HTTP client error occurred: {e}')
     except botocore.exceptions.ClientError as e:
         print(f"An AWS service error occurred: {e}")
     except Exception as e:

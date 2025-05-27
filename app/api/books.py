@@ -1,10 +1,8 @@
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from .schemas import BookSchema, BookUpdateSchema
 from marshmallow import ValidationError
 import os
-from ..services.s3_service import S3Service
-from ..services.book_service import BookService
 from utils.logger import logger
 from datetime import datetime, timezone
 
@@ -51,7 +49,7 @@ async def get_books():
 
     # Get books
     try:
-        books = await book_service.retrieve_books(page, limit)
+        books = await current_app.book_service.retrieve_books(page, limit)
     except Exception as e:
         logger.exception(f"Error retrieving books: {str(e)}")
         return jsonify({
@@ -86,7 +84,7 @@ async def get_book(id):
 
     # Get book
     try:
-        book = await book_service.retrieve_book(id)
+        book = await current_app.book_service.retrieve_book(id)
         if not book:
             logger.warning(f"Book not found: {id}")
             return jsonify({'error': 'Book not found.'}), 404

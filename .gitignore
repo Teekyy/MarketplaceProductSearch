@@ -163,3 +163,4 @@ cython_debug/
 
 local_misc
 data/books_test.json
+client/

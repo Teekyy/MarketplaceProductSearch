@@ -67,7 +67,7 @@ class BookService:
         # Fetch presigned URL for book cover
         if book:
             logger.debug(f"Book found: {book}. Fetching presigned URL for cover")
-            presigned_url = await self._s3.fetch_presigned_url([book["thumbnail"]])
+            presigned_url = await self._s3.fetch_presigned_url(book["thumbnail"])
             book["thumbnail"] = presigned_url
         return book
 

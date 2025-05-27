@@ -29,13 +29,6 @@ class S3Service:
         )
 
 
-    async def get_client(self):
-        """
-        Returns the S3 client.
-        """
-        return self.session.client('s3')
-
-
     async def fetch_presigned_urls(self, s3_keys):
         """
         Asynchronously fetches presigned URLs for a list of S3 keys.
@@ -47,7 +40,7 @@ class S3Service:
             list: A list of presigned URLs.
         """
         logger.debug(f"Fetching presigned URLs for {len(s3_keys)} keys")
-        async with await self.get_client as s3_client:
+        async with self.session.client('s3') as s3_client:
             tasks = []
             for s3_key in s3_keys:
                 task = asyncio.create_task(self._generate_presigned_url(s3_client, s3_key))
@@ -67,7 +60,7 @@ class S3Service:
             str: The presigned URL.
         """
         logger.debug(f"Fetching presigned URL for key: {s3_key}")
-        async with await self.get_client as s3_client:
+        async with self.session.client('s3') as s3_client:
             return await self._generate_presigned_url(s3_client, s3_key)
 
 

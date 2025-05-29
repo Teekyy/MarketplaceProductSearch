@@ -88,7 +88,15 @@ async def download_and_upload_thumbnail(session, s3_client, thumbnail_url, bucke
         async with session.get(thumbnail_url) as response:
             if response.status == 200:
                 image_data = BytesIO(await response.read())
-                await s3_client.upload_fileobj(image_data, bucket_name, s3_key)
+                await s3_client.upload_fileobj(
+                    image_data,
+                    bucket_name,
+                    s3_key,
+                    ExtraArgs={
+                        'ContentType': response.content_type,
+                        'ContentDisposition': 'inline'
+                    }
+                )
                 return True
             else:
                 print(f'Failed to download image from {thumbnail_url}. Status: {response.status}')

@@ -2,12 +2,9 @@ import time
 from dotenv import load_dotenv
 import asyncio
 import boto3
-import botocore.exceptions
 from pymongo import MongoClient
-from pymongo.errors import BulkWriteError
 from pinecone import Pinecone
 from pinecone.exceptions import (
-    PineconeException,
     NotFoundException
 )
 import os
@@ -54,7 +51,7 @@ async def erase_data(s3=False, mongodb=False, pinecone=False):
             print(f"{service} failed to delete book data: {result}")
         else:
             success_count += 1
-            print(f"{service} book data deletion succeded!")
+            print(f"{service} book data deletion succeeded!")
 
     # Display message based on successes
     if success_count == len(services):

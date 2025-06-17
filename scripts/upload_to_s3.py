@@ -7,7 +7,7 @@ import json
 from io import BytesIO
 from tqdm.asyncio import tqdm as atqdm
 import time
-from utils.helpers import generate_s3_key
+from utils.helpers import get_s3_key
 
 
 async def upload_data(file_path):
@@ -47,7 +47,7 @@ async def upload_data(file_path):
 
             # Extract thumbail from JSON file and generate unique S3 key
             thumbnail_url = book['thumbnail']
-            s3_key = generate_s3_key(book)
+            s3_key = get_s3_key(book)
 
             # Create coroutine task and schedule it for execution
             task = asyncio.create_task(download_and_upload_thumbnail(

@@ -1,21 +1,24 @@
 from ..exceptions import BookExistsError
 from utils.logger import logger
+from utils.helpers import get_s3_key
 
 class BookService:
     """
     BookService is a class that provides methods to retrieve and manipulate book data stored in a range of databases.
     """
 
-    def __init__(self, db, s3_service):
+    def __init__(self, sync_db, async_db, s3_service):
         """
         Initializes the BookService with a database connection and an S3 service instance.
 
         Args:
-            db (Database): The database connection to use for book data.
+            sync_db (Database): The synchronous database connection to use for book data.
+            async_db (AsyncDatabase): The asynchronous database connection to use for book data.
             s3_service (S3Service): An instance of S3Service to handle S3 operations.
         """
         logger.info("Initializing BookService")
-        self._db = db
+        self._sync_db = sync_db
+        self._async_db = async_db
         self._s3 = s3_service
 
 
@@ -34,14 +37,14 @@ class BookService:
         # Retrieve book metadata from db
         logger.debug(f"Retrieving books: page={page}, limit={limit}")
         skip = (page - 1) * limit
-        cursor = self._db.books.find().skip(skip).limit(limit)
+        cursor = self._sync_db.books.find().skip(skip).limit(limit)
         books = list(cursor)
         logger.debug(f"Retrieved {len(books)} books from the database")
         
         # Fetch presigned URLs for book covers
         if books:
             logger.debug(f"Fetching presigned URLs for {len(books)} books")
-            s3_keys = [book["thumbnail"] for book in books]
+            s3_keys = [get_s3_key(book) for book in books]
             presigned_urls = await self._s3.fetch_presigned_urls(s3_keys)
             for book, url in zip(books, presigned_urls):
                 book["thumbnail"] = url
@@ -62,12 +65,12 @@ class BookService:
         """
         # Retrieve book metadata from db
         logger.debug(f"Retrieving book with ISBN-13: {isbn_13}")
-        book = self._db.books.find_one({'isbn_13': isbn_13})
+        book = self.sync_db.books.find_one({'isbn_13': isbn_13})
 
         # Fetch presigned URL for book cover
         if book:
             logger.debug(f"Book found: {book}. Fetching presigned URL for cover")
-            presigned_url = await self._s3.fetch_presigned_url(book["thumbnail"])
+            presigned_url = await self._s3.fetch_presigned_url(get_s3_key(book))
             book["thumbnail"] = presigned_url
         return book
 

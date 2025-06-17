@@ -1,9 +1,7 @@
 from pymongo import MongoClient
-from pymongo.errors import BulkWriteError
 import os
 import json
 import time
-from utils.helpers import generate_s3_key
 
 
 def upload_data(file_path):
@@ -22,10 +20,6 @@ def upload_data(file_path):
     # Load book data from JSON file
     with open(file_path, 'r') as file:
         books = json.load(file)
-
-    # Update the thumbnail field with the s3 key for all books
-    for book in books:
-        book['thumbnail'] = generate_s3_key(book)
 
     # Insert all the data into DB
     try:

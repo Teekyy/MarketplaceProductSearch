@@ -1,10 +1,10 @@
-from flask import Flask, current_app
+from flask import Flask
 from utils.logger import logger
 from app.config import Config
 from .custom_json_encoder import CustomJSONEncoder
-from pymongo import MongoClient
+from pymongo import MongoClient, AsyncMongoClient
 from app.services import S3Service, BookService
-
+from app.api.books import books_api
 
 def create_app(config_class=Config):
     """
@@ -23,15 +23,15 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     # Configure DB
-    logger.info("Configuring MongoDB")
+    logger.info("Initializing MongoDB connection")
     init_db(app)
 
     # Configure Services
+    logger.info("Initializing services")
     init_services(app)
 
     # Setup API
     logger.info("Setting up API")
-    from app.api.books import books_api
     app.register_blueprint(books_api)
 
     # Setup JSON encoder
@@ -56,7 +56,7 @@ def init_services(app):
         aws_secret_access_key=app.config["AWS_SECRET_ACCESS_KEY"]
     )
 
-    book_service = BookService(app.db, s3_service)
+    book_service = BookService(app.sync_db, app.async_db, s3_service)
 
     # Register services in app
     app.s3_service = s3_service
@@ -65,19 +65,25 @@ def init_services(app):
 
 def init_db(app):
     """
-    Initialize the MongoDB database connection.
+    Initialize the standard MongoDB and async MongoDB database connections.
 
     Args:
         app (Flask): The Flask application instance.
     """
-    # Store database connection on app instance
-    app.mongo_client = MongoClient(app.config['MONGO_URI'])
-    app.db = app.mongo_client[app.config['MONGO_DB']]
+    # Synchronous MongoDB
+    app.sync_mongo_client = MongoClient(app.config['MONGO_URI'])
+    app.sync_db = app.mongo_client[app.config['MONGO_DB']]
+
+    # Asynchronous MongoDB
+    app.async_mongo_client = AsyncMongoClient(app.config['MONGO_URI'])
+    app.async_db = app.mongo_client(app.config['MONGO_DB'])
 
     # Create indexes
-    app.db.books.create_index({ "isbn_13": 1}, unique=True)
+    app.sync_db.books.create_index({ "isbn_13": 1}, unique=True)
 
     # Close database connection on app exit
     import atexit
-    atexit.register(lambda: app.mongo_client.close())
+    atexit.register(lambda: app.sync_mongo_client.close())
+    atexit.register(lambda: app.async_mongo_client.close())
+
     

@@ -1,4 +1,4 @@
-def generate_s3_key(book):
+def get_s3_key(book):
     """
     Generates an S3 key using information from a book JSON object.
 

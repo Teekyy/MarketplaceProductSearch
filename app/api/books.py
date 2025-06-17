@@ -2,7 +2,6 @@
 from flask import Blueprint, jsonify, request, current_app
 from .schemas import BookSchema, BookUpdateSchema
 from marshmallow import ValidationError
-import os
 from utils.logger import logger
 from datetime import datetime, timezone
 
@@ -121,16 +120,6 @@ async def add_book(id):
         
         # TODO: USE BOOK_SERVICE TO STORE BOOK
 
-        # Insert book metadata
-        book = db.books.insert_one(book_data)
-        # Embed book metadata
-        model = WeightedEmbeddingModel(use_mps=True)
-        embedding = model.embed([book_data])[0]
-        pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-        index = pc.Index(host=os.getenv("PINECONE_INDEX_HOST"))
-        result = index.upsert(vectors=[(book_data['isbn_13'], embedding)])
-        # Upload to thumbnail to S3
-
 
 
     except ValidationError as e:
@@ -164,12 +153,7 @@ def update_book(id):
 
     # TODO: USE BOOK_SERVICE TO UPDATE BOOK
     try:
-        data = schema.load(request.json)
-        book = db.books.update_one(
-            {'_id': ObjectId(id)},
-            {'$set': data}
-        )
-
+        pass
     except ValidationError as e:
         logger.warning(f"Validation error: {e.messages}")
         return jsonify({'error': 'Validation Error', 'messages': e.messages}), 400
@@ -196,7 +180,7 @@ def delete_book(id):
     logger.info(f"DELETE /book/{id} request received")
     # TODO: USE BOOK_SERVICE TO DELETE BOOK
     try:
-        result = db.books.delete_one({'isbn_13': id})
+        pass
     except Exception as e:
         logger.exception(f"Error deleting book: {str(e)}")
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
